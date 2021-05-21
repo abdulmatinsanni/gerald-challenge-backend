@@ -1,8 +1,9 @@
 import { NextFunction, Request, Response } from 'express';
-import { CreateUserDto } from '@dtos/users.dto';
+import { CreateUserDto, VerifyOtpDto } from '@dtos/users.dto';
 import { User } from '@interfaces/users.interface';
 import { RequestWithUser } from '@interfaces/auth.interface';
 import AuthService from '@services/auth.service';
+import bcrypt from 'bcrypt';
 
 class AuthController {
   public authService = new AuthService();
@@ -12,7 +13,25 @@ class AuthController {
       const userData: CreateUserDto = req.body;
       const signUpUserData: User = await this.authService.signup(userData);
 
-      res.status(201).json({ data: signUpUserData, message: 'signup' });
+      res.status(201).json({
+        message: 'User signup was successful',
+        data: signUpUserData,
+      });
+    } catch (error) {
+      next(error);
+    }
+  };
+
+  public verifyOtp = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const userData: VerifyOtpDto = req.body;
+
+      const verifyOtpData: User = await this.authService.verityOtp(userData);
+
+      res.status(201).json({
+        message: 'User was verified was successful',
+        data: verifyOtpData,
+      });
     } catch (error) {
       next(error);
     }

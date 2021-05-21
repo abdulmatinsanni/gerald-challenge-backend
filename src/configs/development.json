@@ -3,8 +3,8 @@
     "dbConfig": {
         "host": "localhost",
         "user": "root",
-        "password": "password",
-        "database": "sequelize",
+        "password": "Password1",
+        "database": "gerald_challenge",
         "pool": {
             "min": 0,
             "max": 5

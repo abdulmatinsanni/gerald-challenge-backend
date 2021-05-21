@@ -2,11 +2,12 @@ import bcrypt from 'bcrypt';
 import config from 'config';
 import jwt from 'jsonwebtoken';
 import DB from '@databases';
-import { CreateUserDto } from '@dtos/users.dto';
+import { CreateUserDto, VerifyOtpDto } from '@dtos/users.dto';
 import HttpException from '@exceptions/HttpException';
 import { DataStoredInToken, TokenData } from '@interfaces/auth.interface';
 import { User } from '@interfaces/users.interface';
 import { isEmpty } from '@utils/util';
+import moment from 'moment';
 
 class AuthService {
   public users = DB.Users;
@@ -18,7 +19,17 @@ class AuthService {
     if (findUser) throw new HttpException(409, `You're email ${userData.email} already exists`);
 
     const hashedPassword = await bcrypt.hash(userData.password, 10);
-    const createUserData: User = await this.users.create({ ...userData, password: hashedPassword });
+
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    const hashedOtp = await bcrypt.hash(otp, 2);
+    console.log(`Here is the user otp: ${otp}`);
+
+    const createUserData: User = await this.users.create({
+      ...userData,
+      otpExpiresAt: moment().add(60, 'seconds').format('YYYY-MM-DD HH:mm:ss'),
+      password: hashedPassword,
+      otp: hashedOtp,
+    });
 
     return createUserData;
   }
@@ -27,7 +38,7 @@ class AuthService {
     if (isEmpty(userData)) throw new HttpException(400, "You're not userData");
 
     const findUser: User = await this.users.findOne({ where: { email: userData.email } });
-    if (!findUser) throw new HttpException(409, `You're email ${userData.email} not found`);
+    if (!findUser) throw new HttpException(409, `Your email ${userData.email} not found`);
 
     const isPasswordMatching: boolean = await bcrypt.compare(userData.password, findUser.password);
     if (!isPasswordMatching) throw new HttpException(409, "You're password not matching");
@@ -36,6 +47,28 @@ class AuthService {
     const cookie = this.createCookie(tokenData);
 
     return { cookie, findUser };
+  }
+
+  public async verityOtp(userData: VerifyOtpDto): Promise<User> {
+    if (isEmpty(userData)) throw new HttpException(400, 'Invalid verify OTP attempt');
+
+    const findUser: User = await this.users.findOne({ where: { phoneNumber: userData.phoneNumber } });
+    if (!findUser) throw new HttpException(409, `Your phone number ${userData.phoneNumber} not found`);
+
+    if (findUser.isVerified) throw new HttpException(409, `You're already verified`);
+
+    const tokenHasExpired = moment(findUser.otpExpiresAt).isBefore(moment());
+    if (tokenHasExpired) throw new HttpException(409, `OTP already expired`);
+
+    const isOtpMatching: boolean = await bcrypt.compare(userData.otp, findUser.otp);
+    if (!isOtpMatching) throw new HttpException(409, 'You entered an invalid OTP');
+
+    findUser.otp = null;
+    findUser.otpExpiresAt = null;
+    findUser.isVerified = true;
+    await findUser.save();
+
+    return findUser;
   }
 
   public async logout(userData: User): Promise<User> {

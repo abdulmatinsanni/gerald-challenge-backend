@@ -13,8 +13,10 @@ describe('Testing Auth', () => {
   describe('[POST] /signup', () => {
     it('response should have the Create userData', async () => {
       const userData: CreateUserDto = {
+        fullName: 'Abdulmatin Sanni',
         email: 'test@email.com',
-        password: 'q1w2e3r4!',
+        phoneNumber: '+2348136888116',
+        password: 'secret',
       };
 
       const authRoute = new AuthRoute();
@@ -36,8 +38,10 @@ describe('Testing Auth', () => {
   describe('[POST] /login', () => {
     it('response should have the Set-Cookie header with the Authorization token', async () => {
       const userData: CreateUserDto = {
+        fullName: 'Abdulmatin Sanni',
         email: 'test@email.com',
-        password: 'q1w2e3r4!',
+        phoneNumber: '+2348136888116',
+        password: 'secret',
       };
 
       const authRoute = new AuthRoute();
